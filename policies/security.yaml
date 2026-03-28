@@ -1,0 +1,131 @@
+# Security Compliance Policies
+# Covers: encryption, access control, backup requirements
+#
+# Operators available:
+#   equals, not_equals, greater_than, less_than, gte, lte
+#   in, not_in, exists, not_exists, contains, not_contains
+
+policies:
+
+  - id: SEC-001
+    name: Production DB Backup Required
+    description: >
+      All production databases must have automated backups enabled to prevent
+      data loss in the event of failure or corruption.
+    severity: critical
+    resource_type: database
+    environment: production
+    remediation: >
+      Enable automated backups in the database configuration. Set
+      backup_enabled: true and configure a backup retention window.
+    conditions:
+      - field: config.backup_enabled
+        operator: equals
+        value: true
+        message: "Automated backups must be enabled for production databases."
+
+  - id: SEC-002
+    name: All Databases Must Use Encryption at Rest
+    description: >
+      Encryption at rest is required for all databases in all environments
+      to protect sensitive data from unauthorized disk access.
+    severity: critical
+    resource_type: database
+    environment: null   # Applies to ALL environments
+    remediation: >
+      Enable encryption at rest. Note: for most managed DB services this
+      must be set at creation time and requires a snapshot-restore migration.
+    conditions:
+      - field: config.encryption_at_rest
+        operator: equals
+        value: true
+        message: "Encryption at rest must be enabled on all databases."
+
+  - id: SEC-003
+    name: Production DB Must Not Be Publicly Accessible
+    description: >
+      Production databases must not be reachable from the public internet.
+      Access should only be allowed through private VPC networking.
+    severity: critical
+    resource_type: database
+    environment: production
+    remediation: >
+      Set publicly_accessible to false and ensure the database is placed
+      in a private subnet with security groups restricting external access.
+    conditions:
+      - field: config.publicly_accessible
+        operator: equals
+        value: false
+        message: "publicly_accessible must be false for production databases."
+
+  - id: SEC-004
+    name: Production Compute Must Not Have Public IP
+    description: >
+      Production compute instances should not have public IP addresses.
+      Access should be routed through a load balancer or bastion host.
+    severity: high
+    resource_type: compute
+    environment: production
+    remediation: >
+      Disable public IP assignment. Use a NAT gateway for outbound internet
+      access and an Application Load Balancer for inbound traffic.
+    conditions:
+      - field: config.public_ip_enabled
+        operator: equals
+        value: false
+        message: "Production compute instances must not have public IP addresses."
+
+  - id: SEC-005
+    name: Backup Retention Must Be At Least 7 Days
+    description: >
+      When backups are enabled, the retention period must be at least 7 days
+      to ensure recovery from delayed-discovery incidents.
+    severity: high
+    resource_type: database
+    environment: production
+    remediation: >
+      Set backup_retention_days to at least 7 in the database configuration.
+    conditions:
+      - field: config.backup_enabled
+        operator: equals
+        value: true
+        message: "Backups must be enabled before checking retention."
+      - field: config.backup_retention_days
+        operator: gte
+        value: 7
+        message: "backup_retention_days must be >= 7."
+    logic: AND
+
+  - id: SEC-006
+    name: Storage Buckets Must Not Allow Public Read
+    description: >
+      Cloud storage buckets must not have public read access enabled,
+      preventing accidental data exposure.
+    severity: critical
+    resource_type: storage
+    environment: null
+    remediation: >
+      Set public_read_access to false and review bucket ACLs and policies.
+      Enable Block Public Access settings where available.
+    conditions:
+      - field: config.public_read_access
+        operator: equals
+        value: false
+        message: "public_read_access must be false for all storage buckets."
+
+  - id: SEC-007
+    name: TLS Version Must Be 1.2 or Higher
+    description: >
+      Services must enforce a minimum TLS version of 1.2 to prevent
+      downgrade attacks (POODLE, BEAST, etc.).
+    severity: high
+    resource_type: database
+    environment: null
+    remediation: >
+      Set min_tls_version to "TLSv1.2" or "TLSv1.3" in the database
+      parameter group or server configuration.
+    conditions:
+      - field: config.min_tls_version
+        operator: in
+        value: ["TLSv1.2", "TLSv1.3"]
+        message: "min_tls_version must be TLSv1.2 or TLSv1.3."

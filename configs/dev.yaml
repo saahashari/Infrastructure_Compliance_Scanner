@@ -1,0 +1,133 @@
+# Dev Infrastructure Configuration Snapshot
+#
+# Dev environments have relaxed operational policies (no HA, no PITR)
+# but must still meet security requirements (encryption at rest).
+# Cost policies enforce use of smallest appropriate instance types.
+
+services:
+
+  # ──────────────────────────────────────────────
+  # DATABASES
+  # ──────────────────────────────────────────────
+
+  - name: dev-users-db
+    type: database
+    environment: dev
+    region: us-east-1
+    owner: platform-team
+    tags:
+      team: platform
+    config:
+      engine: postgres
+      instance_type: db.t3.micro         # Correct for dev
+      backup_enabled: false
+      backup_retention_days: 0
+      encryption_at_rest: true
+      publicly_accessible: false
+      replicas: 0
+      deletion_protection: false
+      monitoring_enabled: false
+      point_in_time_recovery: false
+      min_tls_version: TLSv1.2
+      multi_az: false
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: dev-payments-db
+    type: database
+    environment: dev
+    region: us-east-1
+    owner: payments-team
+    tags:
+      team: payments
+    config:
+      engine: postgres
+      instance_type: db.r5.2xlarge       # VIOLATION: COST-001 — too expensive for dev
+      backup_enabled: false
+      backup_retention_days: 0
+      encryption_at_rest: false           # VIOLATION: SEC-002 — encryption required everywhere
+      publicly_accessible: false
+      replicas: 0
+      deletion_protection: false
+      monitoring_enabled: false
+      point_in_time_recovery: false
+      min_tls_version: TLSv1.2
+      multi_az: false
+    # Expected: 2 violations ✗
+
+  - name: dev-scratch-db
+    type: database
+    environment: dev
+    region: us-east-2
+    owner: unknown                        # VIOLATION: OPS-002 — no owner
+    tags:
+      team: engineering
+    config:
+      engine: sqlite
+      instance_type: db.t3.micro
+      backup_enabled: false
+      backup_retention_days: 0
+      encryption_at_rest: false           # VIOLATION: SEC-002
+      publicly_accessible: true           # NOTE: publicly_accessible check is prod-only (SEC-003 won't fire)
+      replicas: 0
+      deletion_protection: false
+      monitoring_enabled: false
+      point_in_time_recovery: false
+      min_tls_version: TLSv1.0           # VIOLATION: SEC-007 — TLS 1.0 not allowed anywhere
+      multi_az: false
+    # Expected: 3 violations (OPS-002, SEC-002, SEC-007) ✗
+
+  # ──────────────────────────────────────────────
+  # COMPUTE
+  # ──────────────────────────────────────────────
+
+  - name: dev-api-server
+    type: compute
+    environment: dev
+    region: us-east-1
+    owner: backend-team
+    tags:
+      team: backend
+    config:
+      instance_type: t3.small            # Correct for dev
+      public_ip_enabled: true            # OK in dev (no SEC-004 for dev)
+      auto_scaling_enabled: false
+      min_instances: 1
+      max_instances: 1
+      os: ubuntu-22.04
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: dev-ml-worker
+    type: compute
+    environment: dev
+    region: us-east-1
+    owner: ml-team
+    tags:
+      team: ml
+    config:
+      instance_type: p3.8xlarge          # VIOLATION: COST-003 — GPU instance not allowed in dev
+      public_ip_enabled: true
+      auto_scaling_enabled: false
+      min_instances: 1
+      max_instances: 1
+      os: deep-learning-ami
+    # Expected: 1 violation ✗
+
+  # ──────────────────────────────────────────────
+  # STORAGE
+  # ──────────────────────────────────────────────
+
+  - name: dev-test-data-bucket
+    type: storage
+    environment: dev
+    region: us-east-1
+    owner: platform-team
+    tags:
+      team: platform
+    config:
+      storage_class: STANDARD
+      public_read_access: true            # VIOLATION: SEC-006 — public read never allowed
+      versioning_enabled: false           # VIOLATION: OPS-007
+      encryption_enabled: false
+      lifecycle_policy_enabled: false     # VIOLATION: COST-005
+      replication_enabled: false
+    # Expected: 3 violations ✗

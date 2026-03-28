@@ -1,0 +1,117 @@
+# Cost Optimization Compliance Policies
+# Covers: instance type restrictions per environment, cost guardrails
+
+policies:
+
+  - id: COST-001
+    name: Dev/Staging DB Must Use Cost-Optimized Instance Types
+    description: >
+      Dev and staging database instances must use cost-optimized (burstable)
+      instance types to reduce unnecessary spend on non-production workloads.
+    severity: medium
+    resource_type: database
+    environment: dev
+    remediation: >
+      Switch the instance to a cost-optimized type such as db.t3.micro,
+      db.t3.small, or db.t3.medium. Avoid db.r5 and db.m5 classes in dev.
+    conditions:
+      - field: config.instance_type
+        operator: in
+        value:
+          - db.t3.micro
+          - db.t3.small
+          - db.t3.medium
+          - db.t4g.micro
+          - db.t4g.small
+          - db.t4g.medium
+        message: "Dev databases must use a cost-optimized (t3/t4g) instance type."
+
+  - id: COST-002
+    name: Staging DB Must Use Cost-Optimized Instance Types
+    description: >
+      Staging database instances must use cost-optimized instance types.
+    severity: medium
+    resource_type: database
+    environment: staging
+    remediation: >
+      Downsize to a t3 or t4g instance type. Reserve production-grade
+      instance types (r5, m5) for production environments only.
+    conditions:
+      - field: config.instance_type
+        operator: in
+        value:
+          - db.t3.micro
+          - db.t3.small
+          - db.t3.medium
+          - db.t3.large
+          - db.t4g.micro
+          - db.t4g.small
+          - db.t4g.medium
+          - db.t4g.large
+        message: "Staging databases must use a cost-optimized instance type."
+
+  - id: COST-003
+    name: Dev Compute Must Use Cost-Optimized Instance Types
+    description: >
+      Dev compute instances must use burstable or cost-optimized instance
+      types to avoid unnecessary EC2 spend.
+    severity: medium
+    resource_type: compute
+    environment: dev
+    remediation: >
+      Change the instance type to t3.micro, t3.small, or t3.medium.
+      Stop and start the instance to apply the change.
+    conditions:
+      - field: config.instance_type
+        operator: in
+        value:
+          - t3.nano
+          - t3.micro
+          - t3.small
+          - t3.medium
+          - t4g.nano
+          - t4g.micro
+          - t4g.small
+          - t4g.medium
+        message: "Dev compute must use a t3 or t4g (burstable) instance type."
+
+  - id: COST-004
+    name: Staging Compute Must Use Cost-Optimized Instance Types
+    description: >
+      Staging compute instances must use burstable or cost-optimized types.
+    severity: low
+    resource_type: compute
+    environment: staging
+    remediation: >
+      Use t3 or t4g burstable instances for staging workloads. Production-grade
+      instances (m5, c5, r5) should be reserved for production environments.
+    conditions:
+      - field: config.instance_type
+        operator: not_in
+        value:
+          - m5.4xlarge
+          - m5.8xlarge
+          - m5.12xlarge
+          - r5.4xlarge
+          - r5.8xlarge
+          - r5.12xlarge
+          - c5.4xlarge
+          - c5.8xlarge
+        message: "Staging compute must not use large production-grade instance types."
+
+  - id: COST-005
+    name: Storage Must Have Lifecycle Policy Enabled
+    description: >
+      All storage buckets must have a lifecycle policy to automatically
+      transition or expire old data, reducing long-term storage costs.
+    severity: low
+    resource_type: storage
+    environment: null
+    remediation: >
+      Add a lifecycle rule to transition objects older than 90 days to
+      Glacier and expire objects older than 365 days.
+    conditions:
+      - field: config.lifecycle_policy_enabled
+        operator: equals
+        value: true
+        message: "lifecycle_policy_enabled must be true for all storage buckets."

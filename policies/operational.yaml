@@ -1,0 +1,126 @@
+# Operational Compliance Policies
+# Covers: high availability, replication, tagging, monitoring
+
+policies:
+
+  - id: OPS-001
+    name: Production DB Must Have At Least 2 Replicas
+    description: >
+      Production databases must have a minimum of 2 read replicas (or
+      multi-AZ standby instances) to ensure high availability and enable
+      failover without data loss.
+    severity: critical
+    resource_type: database
+    environment: production
+    remediation: >
+      Add read replicas or enable Multi-AZ. For RDS, enable Multi-AZ in
+      the instance settings. For Aurora, add at least 2 replica instances
+      to the cluster.
+    conditions:
+      - field: config.replicas
+        operator: gte
+        value: 2
+        message: "Production databases must have at least 2 replicas."
+
+  - id: OPS-002
+    name: Services Must Have Owner Tag
+    description: >
+      All services must have an 'owner' attribute to enable accountability
+      and incident response routing.
+    severity: medium
+    resource_type: database
+    environment: null
+    remediation: >
+      Add an 'owner' field to the service config with the responsible team
+      or individual's name (e.g., "platform-team", "alice@company.com").
+    conditions:
+      - field: owner
+        operator: not_equals
+        value: "unknown"
+        message: "Service must have a known owner set."
+
+  - id: OPS-003
+    name: Production DB Must Have Deletion Protection Enabled
+    description: >
+      Production databases must have deletion protection enabled to prevent
+      accidental deletion during infrastructure operations.
+    severity: high
+    resource_type: database
+    environment: production
+    remediation: >
+      Enable deletion_protection on the database. In Terraform, set
+      deletion_protection = true. In the AWS Console, enable under
+      Maintenance → Deletion protection.
+    conditions:
+      - field: config.deletion_protection
+        operator: equals
+        value: true
+        message: "deletion_protection must be enabled for production databases."
+
+  - id: OPS-004
+    name: Production DB Must Have Enhanced Monitoring
+    description: >
+      Production databases must have enhanced monitoring enabled to capture
+      OS-level metrics at a granular interval for incident diagnosis.
+    severity: medium
+    resource_type: database
+    environment: production
+    remediation: >
+      Enable enhanced monitoring with a monitoring interval of 60 seconds or
+      less. This requires an IAM role with CloudWatch permissions.
+    conditions:
+      - field: config.monitoring_enabled
+        operator: equals
+        value: true
+        message: "Enhanced monitoring must be enabled for production databases."
+
+  - id: OPS-005
+    name: Compute Must Have Auto Scaling Enabled in Production
+    description: >
+      Production compute services must have auto scaling configured to
+      handle load spikes and maintain availability during traffic surges.
+    severity: high
+    resource_type: compute
+    environment: production
+    remediation: >
+      Configure an Auto Scaling Group with appropriate min/max capacity and
+      a scaling policy tied to CPU or request count metrics.
+    conditions:
+      - field: config.auto_scaling_enabled
+        operator: equals
+        value: true
+        message: "Auto scaling must be enabled for production compute services."
+
+  - id: OPS-006
+    name: Production DB Must Have Point-in-Time Recovery
+    description: >
+      PITR allows recovery to any point within the backup retention window.
+      Required for production to support recovery from application-level errors.
+    severity: high
+    resource_type: database
+    environment: production
+    remediation: >
+      Enable point-in-time recovery. For DynamoDB, this is a toggle in the
+      table settings. For RDS, PITR is available when automated backups are on.
+    conditions:
+      - field: config.point_in_time_recovery
+        operator: equals
+        value: true
+        message: "point_in_time_recovery must be enabled for production databases."
+
+  - id: OPS-007
+    name: Storage Buckets Must Have Versioning Enabled
+    description: >
+      Versioning must be enabled on storage buckets to support recovery from
+      accidental deletes and overwrites.
+    severity: medium
+    resource_type: storage
+    environment: null
+    remediation: >
+      Enable versioning on the storage bucket. For S3, this is under
+      Properties → Bucket Versioning → Enable.
+    conditions:
+      - field: config.versioning_enabled
+        operator: equals
+        value: true
+        message: "versioning_enabled must be true for all storage buckets."

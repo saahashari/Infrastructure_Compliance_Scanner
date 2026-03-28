@@ -1,0 +1,132 @@
+# Staging Infrastructure Configuration Snapshot
+#
+# Staging should mirror production settings for security/encryption
+# but can use smaller, cost-optimized instance types.
+
+services:
+
+  # ──────────────────────────────────────────────
+  # DATABASES
+  # ──────────────────────────────────────────────
+
+  - name: staging-users-db
+    type: database
+    environment: staging
+    region: us-east-1
+    owner: platform-team
+    tags:
+      team: platform
+    config:
+      engine: postgres
+      instance_type: db.t3.medium        # OK for staging (cost-optimized)
+      backup_enabled: true
+      backup_retention_days: 3
+      encryption_at_rest: true
+      publicly_accessible: false
+      replicas: 0
+      deletion_protection: false
+      monitoring_enabled: false
+      point_in_time_recovery: false
+      min_tls_version: TLSv1.2
+      multi_az: false
+    # Expected: FULLY COMPLIANT ✓ (non-prod rules don't require replicas, PITR, etc.)
+
+  - name: staging-payments-db
+    type: database
+    environment: staging
+    region: us-east-1
+    owner: payments-team
+    tags:
+      team: payments
+    config:
+      engine: postgres
+      instance_type: db.r5.2xlarge       # VIOLATION: COST-002 — too expensive for staging
+      backup_enabled: true
+      backup_retention_days: 7
+      encryption_at_rest: false           # VIOLATION: SEC-002 — encryption required everywhere
+      publicly_accessible: false
+      replicas: 0
+      deletion_protection: false
+      monitoring_enabled: false
+      point_in_time_recovery: false
+      min_tls_version: TLSv1.2
+      multi_az: false
+    # Expected: 2 violations ✗
+
+  - name: staging-analytics-db
+    type: database
+    environment: staging
+    region: us-west-2
+    owner: data-team
+    tags:
+      team: data
+    config:
+      engine: mysql
+      instance_type: db.t3.large         # OK for staging
+      backup_enabled: false
+      backup_retention_days: 0
+      encryption_at_rest: true
+      publicly_accessible: false
+      replicas: 0
+      deletion_protection: false
+      monitoring_enabled: false
+      point_in_time_recovery: false
+      min_tls_version: TLSv1.1           # VIOLATION: SEC-007 — TLS 1.1 not allowed
+      multi_az: false
+    # Expected: 1 violation ✗
+
+  # ──────────────────────────────────────────────
+  # COMPUTE
+  # ──────────────────────────────────────────────
+
+  - name: staging-api-server
+    type: compute
+    environment: staging
+    region: us-east-1
+    owner: backend-team
+    tags:
+      team: backend
+    config:
+      instance_type: t3.medium           # OK for staging
+      public_ip_enabled: false
+      auto_scaling_enabled: false
+      min_instances: 1
+      max_instances: 3
+      os: ubuntu-22.04
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: staging-worker
+    type: compute
+    environment: staging
+    region: us-east-1
+    owner: backend-team
+    tags:
+      team: backend
+    config:
+      instance_type: m5.8xlarge           # VIOLATION: COST-004 — oversized for staging
+      public_ip_enabled: false
+      auto_scaling_enabled: false
+      min_instances: 1
+      max_instances: 1
+      os: amazon-linux-2
+    # Expected: 1 violation ✗
+
+  # ──────────────────────────────────────────────
+  # STORAGE
+  # ──────────────────────────────────────────────
+
+  - name: staging-test-bucket
+    type: storage
+    environment: staging
+    region: us-east-1
+    owner: platform-team
+    tags:
+      team: platform
+    config:
+      storage_class: STANDARD
+      public_read_access: false
+      versioning_enabled: false           # VIOLATION: OPS-007 — versioning required everywhere
+      encryption_enabled: true
+      lifecycle_policy_enabled: false     # VIOLATION: COST-005 — lifecycle policy required
+      replication_enabled: false
+    # Expected: 2 violations ✗

@@ -1,0 +1,739 @@
+{
+  "scan_timestamp": "2026-03-28T01:39:25.260018Z",
+  "summary": {
+    "total_services": 20,
+    "total_policies": 19,
+    "total_violations": 32,
+    "compliant_services": 8,
+    "violations_by_severity": {
+      "critical": 9,
+      "high": 10,
+      "medium": 9,
+      "low": 4
+    }
+  },
+  "violations": [
+    {
+      "policy_id": "SEC-002",
+      "policy_name": "All Databases Must Use Encryption at Rest",
+      "severity": "critical",
+      "service": "dev-payments-db",
+      "environment": "dev",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "payments-team",
+      "description": "Encryption at rest is required for all databases in all environments to protect sensitive data from unauthorized disk access.\n",
+      "remediation": "Enable encryption at rest. Note: for most managed DB services this must be set at creation time and requires a snapshot-restore migration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.encryption_at_rest",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.encryption_at_rest' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-002",
+      "policy_name": "All Databases Must Use Encryption at Rest",
+      "severity": "critical",
+      "service": "dev-scratch-db",
+      "environment": "dev",
+      "resource_type": "database",
+      "region": "us-east-2",
+      "owner": "unknown",
+      "description": "Encryption at rest is required for all databases in all environments to protect sensitive data from unauthorized disk access.\n",
+      "remediation": "Enable encryption at rest. Note: for most managed DB services this must be set at creation time and requires a snapshot-restore migration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.encryption_at_rest",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.encryption_at_rest' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-006",
+      "policy_name": "Storage Buckets Must Not Allow Public Read",
+      "severity": "critical",
+      "service": "dev-test-data-bucket",
+      "environment": "dev",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "Cloud storage buckets must not have public read access enabled, preventing accidental data exposure.\n",
+      "remediation": "Set public_read_access to false and review bucket ACLs and policies. Enable Block Public Access settings where available.\n",
+      "failed_conditions": [
+        {
+          "field": "config.public_read_access",
+          "operator": "equals",
+          "expected": false,
+          "actual": true,
+          "message": "'config.public_read_access' is 'True', expected 'False'."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-001",
+      "policy_name": "Production DB Must Have At Least 2 Replicas",
+      "severity": "critical",
+      "service": "prod-analytics-db",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-west-2",
+      "owner": "data-team",
+      "description": "Production databases must have a minimum of 2 read replicas (or multi-AZ standby instances) to ensure high availability and enable failover without data loss.\n",
+      "remediation": "Add read replicas or enable Multi-AZ. For RDS, enable Multi-AZ in the instance settings. For Aurora, add at least 2 replica instances to the cluster.\n",
+      "failed_conditions": [
+        {
+          "field": "config.replicas",
+          "operator": "gte",
+          "expected": 2,
+          "actual": 1,
+          "message": "'config.replicas' is 1.0, must be >= 2.0."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-001",
+      "policy_name": "Production DB Backup Required",
+      "severity": "critical",
+      "service": "prod-analytics-db",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-west-2",
+      "owner": "data-team",
+      "description": "All production databases must have automated backups enabled to prevent data loss in the event of failure or corruption.\n",
+      "remediation": "Enable automated backups in the database configuration. Set backup_enabled: true and configure a backup retention window.\n",
+      "failed_conditions": [
+        {
+          "field": "config.backup_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.backup_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-001",
+      "policy_name": "Production DB Must Have At Least 2 Replicas",
+      "severity": "critical",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Production databases must have a minimum of 2 read replicas (or multi-AZ standby instances) to ensure high availability and enable failover without data loss.\n",
+      "remediation": "Add read replicas or enable Multi-AZ. For RDS, enable Multi-AZ in the instance settings. For Aurora, add at least 2 replica instances to the cluster.\n",
+      "failed_conditions": [
+        {
+          "field": "config.replicas",
+          "operator": "gte",
+          "expected": 2,
+          "actual": 0,
+          "message": "'config.replicas' is 0.0, must be >= 2.0."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-002",
+      "policy_name": "All Databases Must Use Encryption at Rest",
+      "severity": "critical",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Encryption at rest is required for all databases in all environments to protect sensitive data from unauthorized disk access.\n",
+      "remediation": "Enable encryption at rest. Note: for most managed DB services this must be set at creation time and requires a snapshot-restore migration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.encryption_at_rest",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.encryption_at_rest' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-003",
+      "policy_name": "Production DB Must Not Be Publicly Accessible",
+      "severity": "critical",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Production databases must not be reachable from the public internet. Access should only be allowed through private VPC networking.\n",
+      "remediation": "Set publicly_accessible to false and ensure the database is placed in a private subnet with security groups restricting external access.\n",
+      "failed_conditions": [
+        {
+          "field": "config.publicly_accessible",
+          "operator": "equals",
+          "expected": false,
+          "actual": true,
+          "message": "'config.publicly_accessible' is 'True', expected 'False'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-002",
+      "policy_name": "All Databases Must Use Encryption at Rest",
+      "severity": "critical",
+      "service": "staging-payments-db",
+      "environment": "staging",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "payments-team",
+      "description": "Encryption at rest is required for all databases in all environments to protect sensitive data from unauthorized disk access.\n",
+      "remediation": "Enable encryption at rest. Note: for most managed DB services this must be set at creation time and requires a snapshot-restore migration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.encryption_at_rest",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.encryption_at_rest' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-007",
+      "policy_name": "TLS Version Must Be 1.2 or Higher",
+      "severity": "high",
+      "service": "dev-scratch-db",
+      "environment": "dev",
+      "resource_type": "database",
+      "region": "us-east-2",
+      "owner": "unknown",
+      "description": "Services must enforce a minimum TLS version of 1.2 to prevent downgrade attacks (POODLE, BEAST, etc.).\n",
+      "remediation": "Set min_tls_version to \"TLSv1.2\" or \"TLSv1.3\" in the database parameter group or server configuration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.min_tls_version",
+          "operator": "in",
+          "expected": [
+            "TLSv1.2",
+            "TLSv1.3"
+          ],
+          "actual": "TLSv1.0",
+          "message": "'config.min_tls_version' is 'TLSv1.0', must be one of: ['TLSv1.2', 'TLSv1.3']."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-003",
+      "policy_name": "Production DB Must Have Deletion Protection Enabled",
+      "severity": "high",
+      "service": "prod-analytics-db",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-west-2",
+      "owner": "data-team",
+      "description": "Production databases must have deletion protection enabled to prevent accidental deletion during infrastructure operations.\n",
+      "remediation": "Enable deletion_protection on the database. In Terraform, set deletion_protection = true. In the AWS Console, enable under Maintenance \u2192 Deletion protection.\n",
+      "failed_conditions": [
+        {
+          "field": "config.deletion_protection",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.deletion_protection' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-006",
+      "policy_name": "Production DB Must Have Point-in-Time Recovery",
+      "severity": "high",
+      "service": "prod-analytics-db",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-west-2",
+      "owner": "data-team",
+      "description": "PITR allows recovery to any point within the backup retention window. Required for production to support recovery from application-level errors.\n",
+      "remediation": "Enable point-in-time recovery. For DynamoDB, this is a toggle in the table settings. For RDS, PITR is available when automated backups are on.\n",
+      "failed_conditions": [
+        {
+          "field": "config.point_in_time_recovery",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.point_in_time_recovery' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-005",
+      "policy_name": "Backup Retention Must Be At Least 7 Days",
+      "severity": "high",
+      "service": "prod-analytics-db",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-west-2",
+      "owner": "data-team",
+      "description": "When backups are enabled, the retention period must be at least 7 days to ensure recovery from delayed-discovery incidents.\n",
+      "remediation": "Set backup_retention_days to at least 7 in the database configuration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.backup_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.backup_enabled' is 'False', expected 'True'."
+        },
+        {
+          "field": "config.backup_retention_days",
+          "operator": "gte",
+          "expected": 7,
+          "actual": 0,
+          "message": "'config.backup_retention_days' is 0.0, must be >= 7.0."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-003",
+      "policy_name": "Production DB Must Have Deletion Protection Enabled",
+      "severity": "high",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Production databases must have deletion protection enabled to prevent accidental deletion during infrastructure operations.\n",
+      "remediation": "Enable deletion_protection on the database. In Terraform, set deletion_protection = true. In the AWS Console, enable under Maintenance \u2192 Deletion protection.\n",
+      "failed_conditions": [
+        {
+          "field": "config.deletion_protection",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.deletion_protection' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-006",
+      "policy_name": "Production DB Must Have Point-in-Time Recovery",
+      "severity": "high",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "PITR allows recovery to any point within the backup retention window. Required for production to support recovery from application-level errors.\n",
+      "remediation": "Enable point-in-time recovery. For DynamoDB, this is a toggle in the table settings. For RDS, PITR is available when automated backups are on.\n",
+      "failed_conditions": [
+        {
+          "field": "config.point_in_time_recovery",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.point_in_time_recovery' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-007",
+      "policy_name": "TLS Version Must Be 1.2 or Higher",
+      "severity": "high",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Services must enforce a minimum TLS version of 1.2 to prevent downgrade attacks (POODLE, BEAST, etc.).\n",
+      "remediation": "Set min_tls_version to \"TLSv1.2\" or \"TLSv1.3\" in the database parameter group or server configuration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.min_tls_version",
+          "operator": "in",
+          "expected": [
+            "TLSv1.2",
+            "TLSv1.3"
+          ],
+          "actual": "TLSv1.0",
+          "message": "'config.min_tls_version' is 'TLSv1.0', must be one of: ['TLSv1.2', 'TLSv1.3']."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-005",
+      "policy_name": "Compute Must Have Auto Scaling Enabled in Production",
+      "severity": "high",
+      "service": "prod-worker-fleet",
+      "environment": "production",
+      "resource_type": "compute",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Production compute services must have auto scaling configured to handle load spikes and maintain availability during traffic surges.\n",
+      "remediation": "Configure an Auto Scaling Group with appropriate min/max capacity and a scaling policy tied to CPU or request count metrics.\n",
+      "failed_conditions": [
+        {
+          "field": "config.auto_scaling_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.auto_scaling_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-004",
+      "policy_name": "Production Compute Must Not Have Public IP",
+      "severity": "high",
+      "service": "prod-worker-fleet",
+      "environment": "production",
+      "resource_type": "compute",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Production compute instances should not have public IP addresses. Access should be routed through a load balancer or bastion host.\n",
+      "remediation": "Disable public IP assignment. Use a NAT gateway for outbound internet access and an Application Load Balancer for inbound traffic.\n",
+      "failed_conditions": [
+        {
+          "field": "config.public_ip_enabled",
+          "operator": "equals",
+          "expected": false,
+          "actual": true,
+          "message": "'config.public_ip_enabled' is 'True', expected 'False'."
+        }
+      ]
+    },
+    {
+      "policy_id": "SEC-007",
+      "policy_name": "TLS Version Must Be 1.2 or Higher",
+      "severity": "high",
+      "service": "staging-analytics-db",
+      "environment": "staging",
+      "resource_type": "database",
+      "region": "us-west-2",
+      "owner": "data-team",
+      "description": "Services must enforce a minimum TLS version of 1.2 to prevent downgrade attacks (POODLE, BEAST, etc.).\n",
+      "remediation": "Set min_tls_version to \"TLSv1.2\" or \"TLSv1.3\" in the database parameter group or server configuration.\n",
+      "failed_conditions": [
+        {
+          "field": "config.min_tls_version",
+          "operator": "in",
+          "expected": [
+            "TLSv1.2",
+            "TLSv1.3"
+          ],
+          "actual": "TLSv1.1",
+          "message": "'config.min_tls_version' is 'TLSv1.1', must be one of: ['TLSv1.2', 'TLSv1.3']."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-003",
+      "policy_name": "Dev Compute Must Use Cost-Optimized Instance Types",
+      "severity": "medium",
+      "service": "dev-ml-worker",
+      "environment": "dev",
+      "resource_type": "compute",
+      "region": "us-east-1",
+      "owner": "ml-team",
+      "description": "Dev compute instances must use burstable or cost-optimized instance types to avoid unnecessary EC2 spend.\n",
+      "remediation": "Change the instance type to t3.micro, t3.small, or t3.medium. Stop and start the instance to apply the change.\n",
+      "failed_conditions": [
+        {
+          "field": "config.instance_type",
+          "operator": "in",
+          "expected": [
+            "t3.nano",
+            "t3.micro",
+            "t3.small",
+            "t3.medium",
+            "t4g.nano",
+            "t4g.micro",
+            "t4g.small",
+            "t4g.medium"
+          ],
+          "actual": "p3.8xlarge",
+          "message": "'config.instance_type' is 'p3.8xlarge', must be one of: ['t3.nano', 't3.micro', 't3.small', 't3.medium', 't4g.nano', 't4g.micro', 't4g.small', 't4g.medium']."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-001",
+      "policy_name": "Dev/Staging DB Must Use Cost-Optimized Instance Types",
+      "severity": "medium",
+      "service": "dev-payments-db",
+      "environment": "dev",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "payments-team",
+      "description": "Dev and staging database instances must use cost-optimized (burstable) instance types to reduce unnecessary spend on non-production workloads.\n",
+      "remediation": "Switch the instance to a cost-optimized type such as db.t3.micro, db.t3.small, or db.t3.medium. Avoid db.r5 and db.m5 classes in dev.\n",
+      "failed_conditions": [
+        {
+          "field": "config.instance_type",
+          "operator": "in",
+          "expected": [
+            "db.t3.micro",
+            "db.t3.small",
+            "db.t3.medium",
+            "db.t4g.micro",
+            "db.t4g.small",
+            "db.t4g.medium"
+          ],
+          "actual": "db.r5.2xlarge",
+          "message": "'config.instance_type' is 'db.r5.2xlarge', must be one of: ['db.t3.micro', 'db.t3.small', 'db.t3.medium', 'db.t4g.micro', 'db.t4g.small', 'db.t4g.medium']."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-002",
+      "policy_name": "Services Must Have Owner Tag",
+      "severity": "medium",
+      "service": "dev-scratch-db",
+      "environment": "dev",
+      "resource_type": "database",
+      "region": "us-east-2",
+      "owner": "unknown",
+      "description": "All services must have an 'owner' attribute to enable accountability and incident response routing.\n",
+      "remediation": "Add an 'owner' field to the service config with the responsible team or individual's name (e.g., \"platform-team\", \"alice@company.com\").\n",
+      "failed_conditions": [
+        {
+          "field": "owner",
+          "operator": "not_equals",
+          "expected": "unknown",
+          "actual": "unknown",
+          "message": "'owner' is 'unknown', which is not allowed."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-007",
+      "policy_name": "Storage Buckets Must Have Versioning Enabled",
+      "severity": "medium",
+      "service": "dev-test-data-bucket",
+      "environment": "dev",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "Versioning must be enabled on storage buckets to support recovery from accidental deletes and overwrites.\n",
+      "remediation": "Enable versioning on the storage bucket. For S3, this is under Properties \u2192 Bucket Versioning \u2192 Enable.\n",
+      "failed_conditions": [
+        {
+          "field": "config.versioning_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.versioning_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-007",
+      "policy_name": "Storage Buckets Must Have Versioning Enabled",
+      "severity": "medium",
+      "service": "prod-logs-bucket",
+      "environment": "production",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "Versioning must be enabled on storage buckets to support recovery from accidental deletes and overwrites.\n",
+      "remediation": "Enable versioning on the storage bucket. For S3, this is under Properties \u2192 Bucket Versioning \u2192 Enable.\n",
+      "failed_conditions": [
+        {
+          "field": "config.versioning_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.versioning_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-002",
+      "policy_name": "Services Must Have Owner Tag",
+      "severity": "medium",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "All services must have an 'owner' attribute to enable accountability and incident response routing.\n",
+      "remediation": "Add an 'owner' field to the service config with the responsible team or individual's name (e.g., \"platform-team\", \"alice@company.com\").\n",
+      "failed_conditions": [
+        {
+          "field": "owner",
+          "operator": "not_equals",
+          "expected": "unknown",
+          "actual": "unknown",
+          "message": "'owner' is 'unknown', which is not allowed."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-004",
+      "policy_name": "Production DB Must Have Enhanced Monitoring",
+      "severity": "medium",
+      "service": "prod-session-cache",
+      "environment": "production",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "unknown",
+      "description": "Production databases must have enhanced monitoring enabled to capture OS-level metrics at a granular interval for incident diagnosis.\n",
+      "remediation": "Enable enhanced monitoring with a monitoring interval of 60 seconds or less. This requires an IAM role with CloudWatch permissions.\n",
+      "failed_conditions": [
+        {
+          "field": "config.monitoring_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.monitoring_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-002",
+      "policy_name": "Staging DB Must Use Cost-Optimized Instance Types",
+      "severity": "medium",
+      "service": "staging-payments-db",
+      "environment": "staging",
+      "resource_type": "database",
+      "region": "us-east-1",
+      "owner": "payments-team",
+      "description": "Staging database instances must use cost-optimized instance types.\n",
+      "remediation": "Downsize to a t3 or t4g instance type. Reserve production-grade instance types (r5, m5) for production environments only.\n",
+      "failed_conditions": [
+        {
+          "field": "config.instance_type",
+          "operator": "in",
+          "expected": [
+            "db.t3.micro",
+            "db.t3.small",
+            "db.t3.medium",
+            "db.t3.large",
+            "db.t4g.micro",
+            "db.t4g.small",
+            "db.t4g.medium",
+            "db.t4g.large"
+          ],
+          "actual": "db.r5.2xlarge",
+          "message": "'config.instance_type' is 'db.r5.2xlarge', must be one of: ['db.t3.micro', 'db.t3.small', 'db.t3.medium', 'db.t3.large', 'db.t4g.micro', 'db.t4g.small', 'db.t4g.medium', 'db.t4g.large']."
+        }
+      ]
+    },
+    {
+      "policy_id": "OPS-007",
+      "policy_name": "Storage Buckets Must Have Versioning Enabled",
+      "severity": "medium",
+      "service": "staging-test-bucket",
+      "environment": "staging",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "Versioning must be enabled on storage buckets to support recovery from accidental deletes and overwrites.\n",
+      "remediation": "Enable versioning on the storage bucket. For S3, this is under Properties \u2192 Bucket Versioning \u2192 Enable.\n",
+      "failed_conditions": [
+        {
+          "field": "config.versioning_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.versioning_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-005",
+      "policy_name": "Storage Must Have Lifecycle Policy Enabled",
+      "severity": "low",
+      "service": "dev-test-data-bucket",
+      "environment": "dev",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "All storage buckets must have a lifecycle policy to automatically transition or expire old data, reducing long-term storage costs.\n",
+      "remediation": "Add a lifecycle rule to transition objects older than 90 days to Glacier and expire objects older than 365 days.\n",
+      "failed_conditions": [
+        {
+          "field": "config.lifecycle_policy_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.lifecycle_policy_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-005",
+      "policy_name": "Storage Must Have Lifecycle Policy Enabled",
+      "severity": "low",
+      "service": "prod-logs-bucket",
+      "environment": "production",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "All storage buckets must have a lifecycle policy to automatically transition or expire old data, reducing long-term storage costs.\n",
+      "remediation": "Add a lifecycle rule to transition objects older than 90 days to Glacier and expire objects older than 365 days.\n",
+      "failed_conditions": [
+        {
+          "field": "config.lifecycle_policy_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.lifecycle_policy_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-005",
+      "policy_name": "Storage Must Have Lifecycle Policy Enabled",
+      "severity": "low",
+      "service": "staging-test-bucket",
+      "environment": "staging",
+      "resource_type": "storage",
+      "region": "us-east-1",
+      "owner": "platform-team",
+      "description": "All storage buckets must have a lifecycle policy to automatically transition or expire old data, reducing long-term storage costs.\n",
+      "remediation": "Add a lifecycle rule to transition objects older than 90 days to Glacier and expire objects older than 365 days.\n",
+      "failed_conditions": [
+        {
+          "field": "config.lifecycle_policy_enabled",
+          "operator": "equals",
+          "expected": true,
+          "actual": false,
+          "message": "'config.lifecycle_policy_enabled' is 'False', expected 'True'."
+        }
+      ]
+    },
+    {
+      "policy_id": "COST-004",
+      "policy_name": "Staging Compute Must Use Cost-Optimized Instance Types",
+      "severity": "low",
+      "service": "staging-worker",
+      "environment": "staging",
+      "resource_type": "compute",
+      "region": "us-east-1",
+      "owner": "backend-team",
+      "description": "Staging compute instances must use burstable or cost-optimized types.\n",
+      "remediation": "Use t3 or t4g burstable instances for staging workloads. Production-grade instances (m5, c5, r5) should be reserved for production environments.\n",
+      "failed_conditions": [
+        {
+          "field": "config.instance_type",
+          "operator": "not_in",
+          "expected": [
+            "m5.4xlarge",
+            "m5.8xlarge",
+            "m5.12xlarge",
+            "r5.4xlarge",
+            "r5.8xlarge",
+            "r5.12xlarge",
+            "c5.4xlarge",
+            "c5.8xlarge"
+          ],
+          "actual": "m5.8xlarge",
+          "message": "'config.instance_type' is 'm5.8xlarge', which is not allowed. Disallowed values: ['m5.4xlarge', 'm5.8xlarge', 'm5.12xlarge', 'r5.4xlarge', 'r5.8xlarge', 'r5.12xlarge', 'c5.4xlarge', 'c5.8xlarge']."
+        }
+      ]
+    }
+  ]
+}

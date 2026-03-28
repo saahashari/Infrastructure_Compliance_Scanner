@@ -1,0 +1,178 @@
+# Production Infrastructure Configuration Snapshot
+#
+# Represents the current state of production services.
+# Format mirrors what you'd get from a Terraform state export or
+# aws rds describe-db-instances / aws ec2 describe-instances
+#
+# NOTE: Several services here are intentionally misconfigured
+# to demonstrate compliance violations.
+
+services:
+
+  # ──────────────────────────────────────────────
+  # DATABASES
+  # ──────────────────────────────────────────────
+
+  - name: prod-users-db
+    type: database
+    environment: production
+    region: us-east-1
+    owner: platform-team
+    tags:
+      team: platform
+      tier: primary
+    config:
+      engine: postgres
+      instance_type: db.r5.2xlarge
+      backup_enabled: true
+      backup_retention_days: 14
+      encryption_at_rest: true
+      publicly_accessible: false
+      replicas: 3
+      deletion_protection: true
+      monitoring_enabled: true
+      point_in_time_recovery: true
+      min_tls_version: TLSv1.3
+      multi_az: true
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: prod-payments-db
+    type: database
+    environment: production
+    region: us-east-1
+    owner: payments-team
+    tags:
+      team: payments
+      tier: primary
+    config:
+      engine: postgres
+      instance_type: db.r5.4xlarge
+      backup_enabled: true
+      backup_retention_days: 30
+      encryption_at_rest: true
+      publicly_accessible: false
+      replicas: 2
+      deletion_protection: true
+      monitoring_enabled: true
+      point_in_time_recovery: true
+      min_tls_version: TLSv1.2
+      multi_az: true
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: prod-analytics-db
+    type: database
+    environment: production
+    region: us-west-2
+    owner: data-team
+    tags:
+      team: data
+      tier: analytics
+    config:
+      engine: mysql
+      instance_type: db.r5.8xlarge
+      backup_enabled: false               # VIOLATION: SEC-001 — backups not enabled
+      backup_retention_days: 0            # VIOLATION: SEC-005 — retention < 7 days
+      encryption_at_rest: true
+      publicly_accessible: false
+      replicas: 1                         # VIOLATION: OPS-001 — needs >= 2 replicas
+      deletion_protection: false          # VIOLATION: OPS-003 — no deletion protection
+      monitoring_enabled: true
+      point_in_time_recovery: false       # VIOLATION: OPS-006 — PITR disabled
+      min_tls_version: TLSv1.2
+      multi_az: false
+    # Expected: 5 violations ✗
+
+  - name: prod-session-cache
+    type: database
+    environment: production
+    region: us-east-1
+    owner: unknown                        # VIOLATION: OPS-002 — unknown owner
+    tags:
+      team: backend
+    config:
+      engine: redis
+      instance_type: cache.r6g.large
+      backup_enabled: true
+      backup_retention_days: 7
+      encryption_at_rest: false           # VIOLATION: SEC-002 — no encryption at rest
+      publicly_accessible: true           # VIOLATION: SEC-003 — publicly accessible
+      replicas: 0                         # VIOLATION: OPS-001 — needs >= 2 replicas
+      deletion_protection: false          # VIOLATION: OPS-003 — no deletion protection
+      monitoring_enabled: false           # VIOLATION: OPS-004 — no monitoring
+      point_in_time_recovery: false       # VIOLATION: OPS-006 — PITR disabled
+      min_tls_version: TLSv1.0           # VIOLATION: SEC-007 — TLS 1.0 is too old
+      multi_az: false
+    # Expected: 7 violations ✗
+
+  # ──────────────────────────────────────────────
+  # COMPUTE
+  # ──────────────────────────────────────────────
+
+  - name: prod-api-server
+    type: compute
+    environment: production
+    region: us-east-1
+    owner: backend-team
+    tags:
+      team: backend
+      tier: api
+    config:
+      instance_type: m5.2xlarge
+      public_ip_enabled: false
+      auto_scaling_enabled: true
+      min_instances: 3
+      max_instances: 20
+      os: ubuntu-22.04
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: prod-worker-fleet
+    type: compute
+    environment: production
+    region: us-east-1
+    owner: unknown                        # VIOLATION: OPS-002 (if policy covered compute)
+    tags:
+      team: backend
+    config:
+      instance_type: c5.4xlarge
+      public_ip_enabled: true             # VIOLATION: SEC-004 — public IP in production
+      auto_scaling_enabled: false         # VIOLATION: OPS-005 — no auto scaling
+      min_instances: 2
+      max_instances: 2
+      os: amazon-linux-2
+    # Expected: 2 violations ✗
+
+  # ──────────────────────────────────────────────
+  # STORAGE
+  # ──────────────────────────────────────────────
+
+  - name: prod-assets-bucket
+    type: storage
+    environment: production
+    region: us-east-1
+    owner: frontend-team
+    tags:
+      team: frontend
+    config:
+      storage_class: STANDARD
+      public_read_access: false
+      versioning_enabled: true
+      encryption_enabled: true
+      lifecycle_policy_enabled: true
+      replication_enabled: true
+    # Expected: FULLY COMPLIANT ✓
+
+  - name: prod-logs-bucket
+    type: storage
+    environment: production
+    region: us-east-1
+    owner: platform-team
+    tags:
+      team: platform
+    config:
+      storage_class: STANDARD_IA
+      public_read_access: false
+      versioning_enabled: false           # VIOLATION: OPS-007 — no versioning
+      encryption_enabled: true
+      lifecycle_policy_enabled: false     # VIOLATION: COST-005 — no lifecycle policy
+      replication_enabled: false
+    # Expected: 2 violations ✗
