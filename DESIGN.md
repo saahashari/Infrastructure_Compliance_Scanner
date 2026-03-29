@@ -1,7 +1,7 @@
 # Infrastructure Compliance Scanner — System Design
 
-**Author:** Engineering Candidate  
-**Date:** 2025  
+**Author:** Saahas Hari
+**Date:** March 2026 
 **Scope:** Part 1 — System Design Document
 
 ---
