@@ -23,21 +23,21 @@ policies:
         message: "Production databases must have at least 2 replicas."
 
   - id: OPS-002
-    name: Services Must Have Owner Tag
+    name: Databases Must Have Owner Tag
     description: >
-      All services must have an 'owner' attribute to enable accountability
-      and incident response routing.
+      All database services must have an 'owner' attribute to enable
+      accountability and incident response routing.
     severity: medium
     resource_type: database
     environment: null
     remediation: >
-      Add an 'owner' field to the service config with the responsible team
-      or individual's name (e.g., "platform-team", "alice@company.com").
+      Add an 'owner' field to the database service config with the responsible
+      team or individual's name (e.g., "platform-team", "alice@company.com").
     conditions:
       - field: owner
         operator: not_equals
         value: "unknown"
-        message: "Service must have a known owner set."
+        message: "Database service must have a known owner set."
 
   - id: OPS-003
     name: Production DB Must Have Deletion Protection Enabled

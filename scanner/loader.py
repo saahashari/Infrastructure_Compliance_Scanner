@@ -108,14 +108,21 @@ def _parse_policy(raw: Dict, source_file: str) -> Policy:
     except ValueError:
         raise ValueError(f"[{ctx}] 'logic' must be AND or OR, got '{raw_logic}'")
 
+    raw_environment = raw.get("environment", None)
+    normalized_environment = (
+        raw_environment.strip().lower()
+        if isinstance(raw_environment, str)
+        else None
+    )
+
     return Policy(
         id=policy_id,
         name=name,
         description=raw.get("description", ""),
         severity=_parse_severity(_require(raw, "severity", ctx), ctx),
-        resource_type=_require(raw, "resource_type", ctx),
+        resource_type=_require(raw, "resource_type", ctx).strip().lower(),
         conditions=conditions,
-        environment=raw.get("environment", None),  # None = all environments
+        environment=normalized_environment,
         logic=logic,
         remediation=raw.get("remediation", ""),
         tags=raw.get("tags", []),
@@ -202,13 +209,13 @@ def _parse_service(raw: Dict, source_file: str) -> Service:
 
     return Service(
         name=name,
-        type=service_type,
-        environment=environment.lower(),
+        type=service_type.strip().lower(),
+        environment=environment.strip().lower(),
         config=raw_config,
         region=raw.get("region", "us-east-1"),
         owner=raw.get("owner", "unknown"),
         tags=raw.get("tags", {}),
-    )
+)
 
 
 def load_configs(configs_dir: str) -> List[Service]:
@@ -263,7 +270,7 @@ def load_configs(configs_dir: str) -> List[Service]:
         if key in seen:
             logger.warning(
                 "Duplicate service '%s' in environment '%s'. "
-                "Later entry will overwrite earlier in evaluation.",
+                "Both entries will be scanned; consider deduplicating the input snapshot.",
                 svc.name, svc.environment
             )
         seen[key] = svc.name

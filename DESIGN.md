@@ -77,8 +77,8 @@ Policies live as YAML files in a `policies/` directory, grouped by category
 | GCP Asset Inventory | `google-cloud-asset` SDK | Multi-cloud support |
 | Azure Resource Graph | `azure-mgmt-resource` | |
 
-The `loader.py` module is designed with a `DataSource` abstraction so new sources
-can be plugged in without changing the engine.
+The `loader.py` module acts as the integration boundary, so future cloud
+adapters can return the same `Service` objects without changing the engine.
 
 ---
 
@@ -91,8 +91,8 @@ Load Policies → Load Services → Filter (type + env match) → Evaluate Condi
 ```
 
 **Field resolution** uses dot-notation (`config.storage.encryption_enabled`) traversed
-recursively, returning `None` safely if a key is missing — this allows `exists`/`not_exists`
-operators to work correctly on optional fields.
+recursively, returning a sentinel (`_MISSING`) when a key is absent. This allows
+`exists` / `not_exists` checks to distinguish missing fields from explicit falsey values.
 
 **Condition evaluation** is pure and stateless — each condition returns a `ConditionResult`
 with the actual vs. expected value, making it easy to explain exactly why a check failed.

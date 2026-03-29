@@ -11,8 +11,8 @@ Usage examples:
   python main.py --verbose
 
 Exit codes:
-  0  — All services are compliant (or --dry-run)
-  1  — One or more violations found
+  0  — No reportable violations found (or --no-fail is set)
+  1  — One or more reportable violations found
   2  — Configuration or runtime error
 """
 
@@ -74,7 +74,7 @@ Examples:
         nargs="+",
         choices=[s.value for s in Severity],
         metavar="SEV",
-        help="Filter: only show violations at these severity levels",
+        help="Filter the report and exit behavior to these severity levels",
     )
     parser.add_argument(
         "--service",
@@ -171,7 +171,7 @@ def main() -> int:
     engine = ComplianceEngine(policies)
     result = engine.scan(services)
 
-    # --- Apply post-scan filters (severity filter affects display only) ---
+    # --- Apply post-scan filters (severity filter affects report output and exit behavior) ---
     if args.severity:
         result.violations = filter_violations(result.violations, args.severity)
 

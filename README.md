@@ -417,7 +417,7 @@ Then pass the result directly to `ComplianceEngine.scan()`.
 Unit tests are included to verify core engine behavior:
 
 ```bash
-python -m pytest tests/ -v
+python -m unittest discover tests -v
 ```
 
 > Tests cover: field resolution, all operator types (including edge cases like

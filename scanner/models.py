@@ -204,7 +204,10 @@ class ScanResult:
 
     @property
     def compliant_services(self) -> int:
-        violating = {v.service.name for v in self.violations}
+        violating = {
+        (v.service.environment, v.service.type, v.service.name)
+        for v in self.violations
+    }
         return self.total_services - len(violating)
 
     @property
