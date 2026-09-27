@@ -9,7 +9,6 @@ Design note:
 """
 
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -36,6 +35,14 @@ def _require(data: Dict, key: str, context: str) -> Any:
     if key not in data:
         raise ValueError(f"[{context}] Missing required field: '{key}'")
     return data[key]
+
+
+def _require_text(data: Dict, key: str, context: str) -> str:
+    """Require a non-empty string so malformed YAML fails at the input boundary."""
+    value = _require(data, key, context)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"[{context}] '{key}' must be a non-empty string.")
+    return value.strip()
 
 
 def _parse_operator(raw: str, context: str) -> Operator:
@@ -66,8 +73,10 @@ def _parse_severity(raw: str, context: str) -> Severity:
 def _parse_condition(raw: Dict, policy_id: str, idx: int) -> Condition:
     """Parse a single condition dict from YAML into a Condition object."""
     ctx = f"policy={policy_id}, condition[{idx}]"
-    field = _require(raw, "field", ctx)
-    operator_str = _require(raw, "operator", ctx)
+    if not isinstance(raw, dict):
+        raise ValueError(f"[{ctx}] Condition must be a mapping.")
+    field = _require_text(raw, "field", ctx)
+    operator_str = _require_text(raw, "operator", ctx)
     operator = _parse_operator(operator_str, ctx)
 
     # EXISTS/NOT_EXISTS don't need a value
@@ -89,9 +98,11 @@ def _parse_condition(raw: Dict, policy_id: str, idx: int) -> Condition:
 
 def _parse_policy(raw: Dict, source_file: str) -> Policy:
     """Parse a single policy dict from YAML into a Policy object."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"[file={source_file}] Policy must be a mapping.")
     ctx = f"file={source_file}, policy={raw.get('id', '?')}"
-    policy_id = _require(raw, "id", ctx)
-    name = _require(raw, "name", ctx)
+    policy_id = _require_text(raw, "id", ctx)
+    name = _require_text(raw, "name", ctx)
 
     raw_conditions = _require(raw, "conditions", ctx)
     if not isinstance(raw_conditions, list) or len(raw_conditions) == 0:
@@ -102,16 +113,23 @@ def _parse_policy(raw: Dict, source_file: str) -> Policy:
         for i, c in enumerate(raw_conditions)
     ]
 
-    raw_logic = raw.get("logic", "AND").upper()
+    raw_logic = raw.get("logic", "AND")
+    if not isinstance(raw_logic, str):
+        raise ValueError(f"[{ctx}] 'logic' must be AND or OR.")
+    raw_logic = raw_logic.upper()
     try:
         logic = LogicMode(raw_logic)
     except ValueError:
         raise ValueError(f"[{ctx}] 'logic' must be AND or OR, got '{raw_logic}'")
 
     raw_environment = raw.get("environment", None)
+    if raw_environment is not None and (
+        not isinstance(raw_environment, str) or not raw_environment.strip()
+    ):
+        raise ValueError(f"[{ctx}] 'environment' must be a non-empty string or null.")
     normalized_environment = (
         raw_environment.strip().lower()
-        if isinstance(raw_environment, str)
+        if raw_environment is not None
         else None
     )
 
@@ -119,8 +137,8 @@ def _parse_policy(raw: Dict, source_file: str) -> Policy:
         id=policy_id,
         name=name,
         description=raw.get("description", ""),
-        severity=_parse_severity(_require(raw, "severity", ctx), ctx),
-        resource_type=_require(raw, "resource_type", ctx).strip().lower(),
+        severity=_parse_severity(_require_text(raw, "severity", ctx), ctx),
+        resource_type=_require_text(raw, "resource_type", ctx).lower(),
         conditions=conditions,
         environment=normalized_environment,
         logic=logic,
@@ -134,8 +152,7 @@ def load_policies(policies_dir: str) -> List[Policy]:
     Load all YAML policy files from a directory.
 
     Each file can contain a top-level 'policies' list with one or more policies.
-    Files that fail to parse are logged and skipped so one bad file doesn't
-    break the entire scan.
+    Invalid files or records fail the load so a scan cannot silently omit rules.
     """
     policies_path = Path(policies_dir)
     if not policies_path.is_dir():
@@ -150,46 +167,33 @@ def load_policies(policies_dir: str) -> List[Policy]:
 
     for filepath in yaml_files:
         try:
-            with open(filepath) as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
+        except (yaml.YAMLError, OSError) as e:
+            raise ValueError(f"Cannot load policy file '{filepath}': {e}") from e
 
-            if not data or "policies" not in data:
-                logger.warning("Skipping %s: no 'policies' key found.", filepath.name)
-                continue
+        if not isinstance(data, dict) or "policies" not in data:
+            raise ValueError(f"Policy file '{filepath}' must contain a 'policies' list.")
+        raw_policies = data["policies"]
+        if not isinstance(raw_policies, list) or not raw_policies:
+            raise ValueError(f"Policy file '{filepath}' must contain a non-empty 'policies' list.")
 
-            raw_policies = data["policies"]
-            if not isinstance(raw_policies, list):
-                logger.warning("Skipping %s: 'policies' must be a list.", filepath.name)
-                continue
+        for raw_policy in raw_policies:
+            policy = _parse_policy(raw_policy, filepath.name)
+            all_policies.append(policy)
+            logger.debug("Loaded policy: %s (%s)", policy.id, policy.name)
 
-            for raw_policy in raw_policies:
-                try:
-                    policy = _parse_policy(raw_policy, filepath.name)
-                    all_policies.append(policy)
-                    logger.debug("Loaded policy: %s (%s)", policy.id, policy.name)
-                except (ValueError, KeyError) as e:
-                    logger.error("Failed to parse policy in %s: %s", filepath.name, e)
-
-        except yaml.YAMLError as e:
-            logger.error("YAML parse error in %s: %s", filepath.name, e)
-        except OSError as e:
-            logger.error("Cannot read file %s: %s", filepath.name, e)
-
-    # Check for duplicate IDs — each policy ID must be globally unique
+    # Each policy ID must be globally unique.
     seen_ids: Dict[str, str] = {}
-    unique_policies: List[Policy] = []
     for p in all_policies:
         if p.id in seen_ids:
-            logger.warning(
-                "Duplicate policy ID '%s' in '%s' (already loaded). Skipping.",
-                p.id, seen_ids[p.id]
+            raise ValueError(
+                f"Duplicate policy ID '{p.id}' ({seen_ids[p.id]} and {p.name})."
             )
-        else:
-            seen_ids[p.id] = p.name
-            unique_policies.append(p)
+        seen_ids[p.id] = p.name
 
-    logger.info("Loaded %d policies from %d files.", len(unique_policies), len(yaml_files))
-    return unique_policies
+    logger.info("Loaded %d policies from %d files.", len(all_policies), len(yaml_files))
+    return all_policies
 
 
 # ---------------------------------------------------------------------------
@@ -198,10 +202,12 @@ def load_policies(policies_dir: str) -> List[Policy]:
 
 def _parse_service(raw: Dict, source_file: str) -> Service:
     """Parse a single service dict from YAML into a Service object."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"[file={source_file}] Service must be a mapping.")
     ctx = f"file={source_file}, service={raw.get('name', '?')}"
-    name = _require(raw, "name", ctx)
-    service_type = _require(raw, "type", ctx)
-    environment = _require(raw, "environment", ctx)
+    name = _require_text(raw, "name", ctx)
+    service_type = _require_text(raw, "type", ctx)
+    environment = _require_text(raw, "environment", ctx)
 
     raw_config = raw.get("config", {})
     if not isinstance(raw_config, dict):
@@ -238,40 +244,29 @@ def load_configs(configs_dir: str) -> List[Service]:
 
     for filepath in yaml_files:
         try:
-            with open(filepath) as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
+        except (yaml.YAMLError, OSError) as e:
+            raise ValueError(f"Cannot load config file '{filepath}': {e}") from e
 
-            if not data or "services" not in data:
-                logger.warning("Skipping %s: no 'services' key found.", filepath.name)
-                continue
+        if not isinstance(data, dict) or "services" not in data:
+            raise ValueError(f"Config file '{filepath}' must contain a 'services' list.")
+        raw_services = data["services"]
+        if not isinstance(raw_services, list) or not raw_services:
+            raise ValueError(f"Config file '{filepath}' must contain a non-empty 'services' list.")
 
-            raw_services = data["services"]
-            if not isinstance(raw_services, list):
-                logger.warning("Skipping %s: 'services' must be a list.", filepath.name)
-                continue
+        for raw_svc in raw_services:
+            svc = _parse_service(raw_svc, filepath.name)
+            all_services.append(svc)
+            logger.debug("Loaded service: %s (%s/%s)", svc.name, svc.type, svc.environment)
 
-            for raw_svc in raw_services:
-                try:
-                    svc = _parse_service(raw_svc, filepath.name)
-                    all_services.append(svc)
-                    logger.debug("Loaded service: %s (%s/%s)", svc.name, svc.type, svc.environment)
-                except (ValueError, KeyError) as e:
-                    logger.error("Failed to parse service in %s: %s", filepath.name, e)
-
-        except yaml.YAMLError as e:
-            logger.error("YAML parse error in %s: %s", filepath.name, e)
-        except OSError as e:
-            logger.error("Cannot read file %s: %s", filepath.name, e)
-
-    # Warn on duplicate service names within the same environment
-    seen: Dict[str, str] = {}
+    # Duplicate names make the per-service summary ambiguous.
+    seen: Dict[tuple, str] = {}
     for svc in all_services:
-        key = f"{svc.environment}:{svc.name}"
+        key = (svc.environment, svc.name)
         if key in seen:
-            logger.warning(
-                "Duplicate service '%s' in environment '%s'. "
-                "Both entries will be scanned; consider deduplicating the input snapshot.",
-                svc.name, svc.environment
+            raise ValueError(
+                f"Duplicate service '{svc.name}' in environment '{svc.environment}'."
             )
         seen[key] = svc.name
 

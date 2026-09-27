@@ -11,11 +11,14 @@ Built for the Uniphore Engineering Intern take-home assessment.
 ## Quick Start
 
 ```bash
-# 1. Clone / unzip the repository
-cd compliance-scanner
+# 1. Clone the repository
+git clone https://github.com/saahashari/Infrastructure_Compliance_Scanner.git
+cd Infrastructure_Compliance_Scanner
 
-# 2. Install the single dependency
-pip install -r requirements.txt
+# 2. Create a virtual environment and install the single dependency
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 
 # 3. Run a full scan (all environments, all policies)
 python main.py
@@ -25,6 +28,19 @@ python main.py --output json > report.json
 ```
 
 **Exit codes:** `0` = fully compliant · `1` = violations found · `2` = configuration error
+
+Invalid YAML, malformed policies or services, duplicate policy IDs or service names,
+filters that match no services, and services with no applicable policies return exit
+code `2`. This prevents an incomplete scan from appearing compliant. The report
+includes scanned and unscanned service counts plus the identity of every unscanned
+service. `--no-fail` suppresses only the violation exit code.
+
+Run the tests with `python -m unittest discover -s tests -q` in the virtual environment.
+
+The engine builds a policy index in O(P) time for P policies. It uses two indexed
+lookups per service (environment-specific and global policies), then evaluates
+only applicable conditions. Sorting V violations costs O(V log V); condition
+evaluation also depends on the depth of each field path.
 
 ---
 
@@ -53,7 +69,12 @@ compliance-scanner/
 │   ├── staging.yaml            # 6 services (staging DBs, compute, storage)
 │   └── dev.yaml                # 6 services (dev DBs, compute, storage)
 │
-└── example_output.json         # Full JSON report from a sample scan
+├── example_output.json         # Full JSON report from a sample scan
+└── tests/                     # Engine and CLI regression tests
+    ├── test_engine.py
+    ├── test_loader_cli.py
+    ├── test_reporter.py
+    └── test_scan_regressions.py
 ```
 
 ---
@@ -165,6 +186,10 @@ policies:
 | `contains` | String contains substring | `"prod"` |
 | `not_contains` | String does not contain | `"test"` |
 
+Boolean values are distinct from numeric `0` and `1` in equality and membership
+checks. Numeric comparisons reject booleans and non-finite values. JSON reports
+represent a non-finite actual value as a string so the document stays valid JSON.
+
 ### Field Path Resolution
 
 Policies use **dot-notation** to navigate nested config dicts:
@@ -237,6 +262,8 @@ Missing fields return `_MISSING` internally — they fail any operator except
 
   Total violations : 32
   Compliant svcs   : 8 / 20
+  Scanned svcs     : 20 / 20
+  Unscanned svcs   : 0
 
 ──────────────────────────────────────────────────────────────────────
   CRITICAL  (9 violations)

@@ -423,10 +423,13 @@ class TestComplianceEngine(unittest.TestCase):
         self.assertTrue(result.is_compliant())
         self.assertEqual(result.total_services, 0)
 
-    def test_no_policies_always_compliant(self):
+    def test_no_policies_leave_service_unscanned(self):
         engine = ComplianceEngine([])
         result = engine.scan([make_service(config={"backup_enabled": False})])
-        self.assertTrue(result.is_compliant())
+        self.assertFalse(result.is_compliant())
+        self.assertEqual(result.scanned_services, 0)
+        self.assertEqual(result.compliant_services, 0)
+        self.assertEqual(len(result.unscanned_services), 1)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ anywhere Python runs, including CI runners.
 """
 
 import json
+import math
 import sys
 from typing import Dict, List, TextIO
 
@@ -138,6 +139,8 @@ def print_terminal_report(result: ScanResult, stream: TextIO = sys.stdout) -> No
     _print("", stream)
     _print(f"  Total violations : {Color.BOLD}{result.total_violations}{Color.RESET}", stream)
     _print(f"  Compliant svcs   : {Color.GREEN}{result.compliant_services}{Color.RESET} / {result.total_services}", stream)
+    _print(f"  Scanned svcs     : {result.scanned_services} / {result.total_services}", stream)
+    _print(f"  Unscanned svcs   : {len(result.unscanned_services)}", stream)
 
     if result.is_compliant():
         _print("", stream)
@@ -169,15 +172,29 @@ def print_terminal_report(result: ScanResult, stream: TextIO = sys.stdout) -> No
         for i, violation in enumerate(group, 1):
             _print_violation(violation, i, stream)
 
+    if result.unscanned_services:
+        _print("", stream)
+        _print(_divider(), stream)
+        _print(f"  {Color.RED}{Color.BOLD}UNSCANNED SERVICES{Color.RESET}", stream)
+        _print(_divider(), stream)
+        for service in result.unscanned_services:
+            _print(
+                f"  {service.name} ({service.type}/{service.environment}) has no applicable policy.",
+                stream,
+            )
+
     # --- Footer ---
     _print("", stream)
     _print(_divider("═"), stream)
-    status_color = Color.RED if result.total_violations > 0 else Color.GREEN
-    status_icon  = "✗" if result.total_violations > 0 else "✓"
+    status = f"{result.total_violations} violation(s) found across {result.total_services} service(s)."
+    if result.unscanned_services:
+        status = (
+            f"{result.total_violations} violation(s) and "
+            f"{len(result.unscanned_services)} unscanned service(s) "
+            f"across {result.total_services} service(s)."
+        )
     _print(
-        f"  {status_color}{Color.BOLD}{status_icon} "
-        f"{result.total_violations} violation(s) found across "
-        f"{result.total_services} service(s).{Color.RESET}",
+        f"  {Color.RED}{Color.BOLD}✗ {status}{Color.RESET}",
         stream
     )
     _print(_divider("═"), stream)
@@ -187,6 +204,17 @@ def print_terminal_report(result: ScanResult, stream: TextIO = sys.stdout) -> No
 # ---------------------------------------------------------------------------
 # JSON Reporter
 # ---------------------------------------------------------------------------
+
+def _json_safe(value):
+    """Preserve non-finite measurements as strings in standards-compliant JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
+
 
 def print_json_report(result: ScanResult, stream: TextIO = sys.stdout) -> None:
     """
@@ -199,5 +227,5 @@ def print_json_report(result: ScanResult, stream: TextIO = sys.stdout) -> None:
       - Slack/PagerDuty alerting webhooks
     """
     payload = result.to_dict()
-    json.dump(payload, stream, indent=2, default=str)
+    json.dump(_json_safe(payload), stream, indent=2, default=str, allow_nan=False)
     stream.write("\n")

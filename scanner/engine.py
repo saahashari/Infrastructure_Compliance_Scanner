@@ -14,6 +14,7 @@ Design principles:
 """
 
 import logging
+import math
 import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -33,6 +34,13 @@ logger = logging.getLogger(__name__)
 
 # Sentinel used to distinguish "field is absent" from "field has value None"
 _MISSING = object()
+
+
+def _values_equal(actual: Any, expected: Any) -> bool:
+    """Keep booleans distinct from numbers in policy comparisons."""
+    if isinstance(actual, bool) or isinstance(expected, bool):
+        return type(actual) is type(expected) and actual == expected
+    return actual == expected
 
 
 # ---------------------------------------------------------------------------
@@ -142,14 +150,14 @@ def evaluate_condition(condition: Condition, service: Service) -> ConditionResul
 
     # --- Equality ---
     if op == Operator.EQUALS:
-        if actual_value == expected:
+        if _values_equal(actual_value, expected):
             return _pass()
         return _fail(
             f"'{condition.field}' is '{actual_value}', expected '{expected}'."
         )
 
     if op == Operator.NOT_EQUALS:
-        if actual_value != expected:
+        if not _values_equal(actual_value, expected):
             return _pass()
         return _fail(
             f"'{condition.field}' is '{actual_value}', which is not allowed."
@@ -158,6 +166,8 @@ def evaluate_condition(condition: Condition, service: Service) -> ConditionResul
     # --- Numeric comparisons (with type safety) ---
     numeric_ops = {Operator.GREATER_THAN, Operator.LESS_THAN, Operator.GTE, Operator.LTE}
     if op in numeric_ops:
+        if isinstance(actual_value, bool) or isinstance(expected, bool):
+            return _fail(f"Cannot compare '{condition.field}' numerically with a boolean value.")
         try:
             actual_num = float(actual_value)
             expected_num = float(expected)
@@ -166,6 +176,8 @@ def evaluate_condition(condition: Condition, service: Service) -> ConditionResul
                 f"Cannot compare '{condition.field}' (value='{actual_value}', "
                 f"type={type(actual_value).__name__}) numerically with '{expected}'."
             )
+        if not math.isfinite(actual_num) or not math.isfinite(expected_num):
+            return _fail(f"Cannot compare '{condition.field}' with a non-finite number.")
 
         op_map = {
             Operator.GREATER_THAN: (actual_num > expected_num,  ">"),
@@ -184,7 +196,7 @@ def evaluate_condition(condition: Condition, service: Service) -> ConditionResul
     if op == Operator.IN:
         if not isinstance(expected, list):
             return _fail(f"Operator 'in' requires 'value' to be a list, got {type(expected).__name__}.")
-        if actual_value in expected:
+        if any(_values_equal(actual_value, candidate) for candidate in expected):
             return _pass()
         return _fail(
             f"'{condition.field}' is '{actual_value}', must be one of: {expected}."
@@ -193,7 +205,7 @@ def evaluate_condition(condition: Condition, service: Service) -> ConditionResul
     if op == Operator.NOT_IN:
         if not isinstance(expected, list):
             return _fail(f"Operator 'not_in' requires 'value' to be a list.")
-        if actual_value not in expected:
+        if not any(_values_equal(actual_value, candidate) for candidate in expected):
             return _pass()
         return _fail(
             f"'{condition.field}' is '{actual_value}', which is not allowed. "
@@ -300,7 +312,10 @@ class ComplianceEngine:
     def _build_index(self) -> None:
         """Pre-index policies by (resource_type, environment) for O(1) lookup."""
         for policy in self.policies:
-            key = (policy.resource_type.lower(), policy.environment)
+            key = (
+                policy.resource_type.lower(),
+                policy.environment.lower() if policy.environment is not None else None,
+            )
             self._index[key].append(policy)
         logger.debug(
             "Policy index built: %d buckets for %d policies.",
@@ -330,9 +345,17 @@ class ComplianceEngine:
         Returns a ScanResult with the full violation list and summary statistics.
         """
         all_violations: List[Violation] = []
+        unscanned_services: List[Service] = []
 
         for service in services:
             applicable = self._get_applicable_policies(service)
+            if not applicable:
+                unscanned_services.append(service)
+                logger.debug(
+                    "No policies apply to service '%s' (%s/%s).",
+                    service.name, service.type, service.environment,
+                )
+                continue
             logger.debug(
                 "Service '%s' (%s/%s): checking against %d policies.",
                 service.name, service.type, service.environment, len(applicable)
@@ -356,4 +379,5 @@ class ComplianceEngine:
             violations=all_violations,
             total_services=len(services),
             total_policies=len(self.policies),
+            unscanned_services=unscanned_services,
         )

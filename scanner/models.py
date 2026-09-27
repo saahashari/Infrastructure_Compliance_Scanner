@@ -197,6 +197,7 @@ class ScanResult:
     scan_timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     )
+    unscanned_services: List[Service] = field(default_factory=list)
 
     @property
     def total_violations(self) -> int:
@@ -205,10 +206,18 @@ class ScanResult:
     @property
     def compliant_services(self) -> int:
         violating = {
-        (v.service.environment, v.service.type, v.service.name)
-        for v in self.violations
-    }
-        return self.total_services - len(violating)
+            (v.service.environment, v.service.type, v.service.name)
+            for v in self.violations
+        }
+        unscanned = {
+            (s.environment, s.type, s.name)
+            for s in self.unscanned_services
+        }
+        return self.total_services - len(violating | unscanned)
+
+    @property
+    def scanned_services(self) -> int:
+        return self.total_services - len(self.unscanned_services)
 
     @property
     def violations_by_severity(self) -> Dict[str, int]:
@@ -218,17 +227,27 @@ class ScanResult:
         return counts
 
     def is_compliant(self) -> bool:
-        return len(self.violations) == 0
+        return not self.violations and not self.unscanned_services
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "scan_timestamp": self.scan_timestamp,
             "summary": {
                 "total_services": self.total_services,
+                "scanned_services": self.scanned_services,
+                "unscanned_services": len(self.unscanned_services),
                 "total_policies": self.total_policies,
                 "total_violations": self.total_violations,
                 "compliant_services": self.compliant_services,
                 "violations_by_severity": self.violations_by_severity,
             },
+            "unscanned_services": [
+                {
+                    "name": s.name,
+                    "resource_type": s.type,
+                    "environment": s.environment,
+                }
+                for s in self.unscanned_services
+            ],
             "violations": [v.to_dict() for v in self.violations],
         }

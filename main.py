@@ -129,7 +129,7 @@ def main() -> int:
     # --- Load policies ---
     try:
         policies = load_policies(args.policies)
-    except FileNotFoundError as e:
+    except (OSError, ValueError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
 
@@ -140,7 +140,7 @@ def main() -> int:
     # --- Load infrastructure configs ---
     try:
         services = load_configs(args.configs)
-    except FileNotFoundError as e:
+    except (OSError, ValueError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
 
@@ -153,19 +153,19 @@ def main() -> int:
         services = [s for s in services if s.environment.lower() == args.env.lower()]
         if not services:
             print(
-                f"WARNING: No services found for environment '{args.env}'.",
+                f"ERROR: No services found for environment '{args.env}'.",
                 file=sys.stderr
             )
-            return 0
+            return 2
 
     if args.service:
         services = [s for s in services if s.name.lower() == args.service.lower()]
         if not services:
             print(
-                f"WARNING: No service named '{args.service}' found.",
+                f"ERROR: No service named '{args.service}' found.",
                 file=sys.stderr
             )
-            return 0
+            return 2
 
     # --- Run the engine ---
     engine = ComplianceEngine(policies)
@@ -182,6 +182,13 @@ def main() -> int:
         print_terminal_report(result, sys.stdout)
 
     # --- Exit code ---
+    if result.unscanned_services:
+        print(
+            f"ERROR: {len(result.unscanned_services)} service(s) had no applicable policies.",
+            file=sys.stderr,
+        )
+        return 2
+
     if args.no_fail:
         return 0
 

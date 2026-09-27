@@ -2,6 +2,8 @@
   "scan_timestamp": "2026-03-29T04:40:17.378166Z",
   "summary": {
     "total_services": 20,
+    "scanned_services": 20,
+    "unscanned_services": 0,
     "total_policies": 19,
     "total_violations": 32,
     "compliant_services": 8,
@@ -12,6 +14,7 @@
       "low": 4
     }
   },
+  "unscanned_services": [],
   "violations": [
     {
       "policy_id": "SEC-002",
